@@ -2,16 +2,15 @@ name: Update Weather Playlist
 
 on:
   schedule:
-    # Run at the top of every hour
-    - cron: '0 * * * *'
-  workflow_dispatch:
-    # Allow manual trigger from GitHub Actions tab
+    - cron: '0 * * * *'   # Every hour at minute 0
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
 
 jobs:
-  update-playlist:
+  update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -22,10 +21,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Update Spotify playlist
+      - name: Run playlist updater
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
           PLAYLIST_ID: ${{ secrets.PLAYLIST_ID }}
-        run: python update_playlist.py
+          LATITUDE: "40.9429"
+          LONGITUDE: "-4.1088"
+        run: python main.py

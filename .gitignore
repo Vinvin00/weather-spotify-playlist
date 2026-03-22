@@ -1,7 +1,12 @@
-.env
-.cache
 __pycache__/
 *.pyc
+.env
 .DS_Store
-venv/
 .vscode/
+.cache
+.cache-*
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
