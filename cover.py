@@ -5,6 +5,7 @@ import io
 import math
 import random
 
+import spotipy
 from PIL import Image, ImageDraw, ImageFont
 
 import config
