@@ -4,14 +4,12 @@ main.py — Entry point for weather-based Spotify playlist updater.
 Flow:
 1. Authenticate with Spotify
 2. Fetch current weather for configured location
-3. Map weather to mood (audio feature targets)
-4. Build user's taste profile from their top tracks
-5. Blend mood + taste into recommendation targets
-6. Get current playlist track IDs (to avoid repeating)
-7. Fetch and filter recommendations
-8. Replace playlist contents
-9. Generate and upload cover image
-10. Log summary
+3. Map weather to mood (keywords/genres)
+4. Build user's taste profile (top artists, genres — NO audio features)
+5. Get current playlist tracks (to avoid repeats)
+6. Search-based recommendations blending mood + taste
+7. Replace playlist contents
+8. Generate and upload cover image
 
 Error handling:
 - Wrap entire flow in try/except
@@ -24,11 +22,11 @@ import logging
 import sys
 
 from auth import get_spotify_client
-from config import FRESHNESS_RATIO, LATITUDE, LONGITUDE, PLAYLIST_ID
+from config import LATITUDE, LONGITUDE, PLAYLIST_ID
 from cover import generate_cover, upload_cover
 from mood import weather_to_mood
 from playlist import update_playlist
-from recommend import blend_targets, get_recommendations
+from recommend import get_recommendations
 from taste import build_taste_profile
 from weather import fetch_weather
 
@@ -50,20 +48,15 @@ def main() -> None:
         weather = fetch_weather(LATITUDE, LONGITUDE)
         logger.info(f"Weather: {weather['description']}, {weather['temperature']}°C")
 
-        # Step 3: Mood
+        # Step 3: Weather → mood keywords/genres
         mood = weather_to_mood(weather)
-        logger.info(
-            f"Mood targets: energy={mood['energy']['target']:.2f}, valence={mood['valence']['target']:.2f}"
-        )
+        logger.info(f"Mood: vibe={mood['vibe']}, keywords={mood['keywords'][:3]}")
 
-        # Step 4: Taste
+        # Step 4: User's taste profile (top artists, genres — NO audio features)
         logger.info("Building taste profile...")
         taste = build_taste_profile(sp)
 
-        # Step 5: Blend
-        blended = blend_targets(mood, taste, ratio=FRESHNESS_RATIO)
-
-        # Step 6: Current playlist
+        # Step 5: Get current playlist tracks (to avoid repeats)
         current = sp.playlist_items(PLAYLIST_ID, fields="items(track(id))")
         current_ids = set()
         for item in current.get("items", []):
@@ -71,16 +64,16 @@ def main() -> None:
             if track and track.get("id"):
                 current_ids.add(track["id"])
 
-        # Step 7: Recommend
+        # Step 6: Search-based recommendations blending mood + taste
         logger.info("Fetching recommendations...")
-        track_uris = get_recommendations(sp, blended, taste, current_ids)
+        track_uris = get_recommendations(sp, mood, taste, current_ids)
         logger.info(f"Selected {len(track_uris)} tracks")
 
-        # Step 8: Update playlist
+        # Step 7: Update playlist
         update_playlist(sp, track_uris, weather)
         logger.info("✓ Playlist updated")
 
-        # Step 9: Cover image (don't crash if it fails)
+        # Step 8: Cover image (don't crash if it fails)
         try:
             logger.info("Generating cover image...")
             cover_b64 = generate_cover(weather)

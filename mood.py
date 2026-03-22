@@ -1,22 +1,14 @@
-"""Map weather conditions to Spotify audio feature target ranges."""
-
-
-def _clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, value))
+"""Map weather conditions to search keywords and genre tags."""
 
 
 def weather_to_mood(weather: dict) -> dict:
     """
-    Convert weather data into target audio feature ranges.
+    Convert weather data into search keywords and genre preferences.
 
-    Returns dict with keys for each audio feature, each containing:
-        - target: float (ideal value)
-        - min: float (acceptable minimum)
-        - max: float (acceptable maximum)
-
-    MAPPING LOGIC:
-    Base mood from weather_code, then apply modifiers for temp/wind/night.
-    Min/max: target ± 0.15 (tempo: ± 20, clamped to [60, 200])
+    Returns dict with:
+        - keywords: list of search terms (2-3 mood words)
+        - genres: list of genre tags that fit the weather
+        - vibe: str — one-word summary like "upbeat", "melancholy", "cozy", "intense"
     """
     code = weather.get("weather_code", 0)
     temp = weather.get("temperature", 15)
@@ -24,66 +16,59 @@ def weather_to_mood(weather: dict) -> dict:
     is_day = weather.get("is_day", True)
 
     # Base mood from weather_code
-    if code == 0:
-        base = {"energy": 0.7, "valence": 0.75, "danceability": 0.65, "tempo": 120, "acousticness": 0.3}
+    if code == 0 and is_day:
+        keywords = ["happy", "upbeat", "sunshine", "feel good"]
+        genres = ["pop", "indie pop", "summer", "dance pop", "tropical"]
+        vibe = "upbeat"
+    elif code == 0 and not is_day:
+        keywords = ["chill night", "smooth", "evening", "late night"]
+        genres = ["r-n-b", "neo soul", "jazz", "chill", "lo-fi"]
+        vibe = "smooth"
     elif code in (1, 2, 3):
-        base = {"energy": 0.55, "valence": 0.6, "danceability": 0.55, "tempo": 110, "acousticness": 0.4}
+        keywords = ["indie", "dreamy", "mellow", "easy going"]
+        genres = ["indie", "alternative", "dream pop", "indie folk", "soft rock"]
+        vibe = "mellow"
     elif code in (45, 48):
-        base = {"energy": 0.3, "valence": 0.4, "danceability": 0.35, "tempo": 85, "acousticness": 0.7}
+        keywords = ["atmospheric", "ambient", "ethereal", "hazy"]
+        genres = ["ambient", "shoegaze", "post-rock", "electronic", "downtempo"]
+        vibe = "atmospheric"
     elif 51 <= code <= 55:
-        base = {"energy": 0.35, "valence": 0.45, "danceability": 0.4, "tempo": 90, "acousticness": 0.65}
+        keywords = ["gentle rain", "acoustic", "soft", "tender"]
+        genres = ["acoustic", "singer-songwriter", "folk", "indie", "chill"]
+        vibe = "tender"
     elif 61 <= code <= 65:
-        base = {"energy": 0.3, "valence": 0.35, "danceability": 0.35, "tempo": 85, "acousticness": 0.6}
+        keywords = ["rainy day", "melancholy", "reflective", "moody"]
+        genres = ["indie", "alternative", "indie rock", "sad", "rainy-day"]
+        vibe = "melancholy"
     elif 71 <= code <= 75:
-        base = {"energy": 0.25, "valence": 0.5, "danceability": 0.3, "tempo": 80, "acousticness": 0.7}
-    elif code in (95, 96, 99):
-        base = {"energy": 0.8, "valence": 0.3, "danceability": 0.5, "tempo": 130, "acousticness": 0.2}
+        keywords = ["winter", "cozy", "warm", "peaceful"]
+        genres = ["acoustic", "ambient", "folk", "piano", "classical"]
+        vibe = "cozy"
     elif 80 <= code <= 82:
-        base = {"energy": 0.4, "valence": 0.4, "danceability": 0.4, "tempo": 95, "acousticness": 0.55}
+        keywords = ["energetic rain", "dramatic", "powerful"]
+        genres = ["rock", "alternative", "post-rock", "indie rock"]
+        vibe = "dramatic"
+    elif code in (95, 96, 99):
+        keywords = ["intense", "dark", "powerful", "electric"]
+        genres = ["electronic", "industrial", "metal", "drum-and-bass"]
+        vibe = "intense"
     else:
-        base = {"energy": 0.5, "valence": 0.5, "danceability": 0.5, "tempo": 100, "acousticness": 0.5}
+        keywords = ["indie", "mellow", "easy going"]
+        genres = ["indie", "pop", "alternative"]
+        vibe = "mellow"
 
-    # Modifiers
+    # Temperature modifiers
     if temp > 30:
-        base["energy"] += 0.1
-        base["valence"] += 0.05
+        keywords = keywords + ["summer", "tropical"]
     elif temp < 5:
-        base["energy"] -= 0.1
-        base["acousticness"] += 0.1
+        keywords = keywords + ["winter", "cozy"]
+
+    # Wind modifier
     if wind > 30:
-        base["energy"] += 0.1
-    if not is_day:
-        base["energy"] -= 0.1
-        base["valence"] -= 0.05
-        base["acousticness"] += 0.1
+        keywords = keywords + ["energetic"]
 
-    # Instrumentalness
-    inst_target = 0.2 if not is_day else 0.1
-    inst_max = 0.7 if not is_day else 0.5
-
-    # Build result with min/max
-    result = {}
-    delta = 0.15
-    tempo_delta = 20
-
-    for key in ("energy", "valence", "danceability", "acousticness"):
-        target = _clamp(base[key], 0, 1)
-        result[key] = {
-            "target": target,
-            "min": _clamp(target - delta, 0, 1),
-            "max": _clamp(target + delta, 0, 1),
-        }
-
-    result["tempo"] = {
-        "target": base["tempo"],
-        "min": _clamp(base["tempo"] - tempo_delta, 60, 200),
-        "max": _clamp(base["tempo"] + tempo_delta, 60, 200),
+    return {
+        "keywords": keywords,
+        "genres": genres,
+        "vibe": vibe,
     }
-
-    result["instrumentalness"] = {
-        "target": inst_target,
-        "min": 0,
-        "max": inst_max,
-    }
-
-    return result

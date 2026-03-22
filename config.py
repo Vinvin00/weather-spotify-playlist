@@ -16,8 +16,6 @@ LONGITUDE = float(os.environ.get("LONGITUDE", "-4.1088"))
 
 # Playlist settings
 PLAYLIST_SIZE = 25  # Number of tracks in the final playlist
-CANDIDATE_POOL_SIZE = 40  # How many recommendations to request (filter down from here)
-FRESHNESS_RATIO = 0.7  # 70% weight to weather mood, 30% to personal taste
 TOP_TRACKS_LIMIT = 50  # How many top tracks to analyze for taste profile
 
 # Spotify API scopes needed
