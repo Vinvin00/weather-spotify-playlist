@@ -3,12 +3,41 @@
 import base64
 import io
 import math
+import os
 import random
 
 import spotipy
 from PIL import Image, ImageDraw, ImageFont
 
 import config
+
+# Path to covers folder (next to this file)
+COVERS_DIR = os.path.join(os.path.dirname(__file__), "covers")
+
+
+def _weather_to_filename(weather: dict) -> str:
+    """Map weather code and is_day to cover image filename."""
+    code = weather.get("weather_code", 0)
+    is_day = weather.get("is_day", True)
+    if code == 0 and is_day:
+        return "clear_day.jpg"
+    if code == 0 and not is_day:
+        return "clear_night.jpg"
+    if code in (1, 2, 3):
+        return "cloudy.jpg"
+    if code in (45, 48):
+        return "foggy.jpg"
+    if 51 <= code <= 55:
+        return "drizzle.jpg"
+    if 61 <= code <= 65:
+        return "rain.jpg"
+    if 71 <= code <= 75:
+        return "snow.jpg"
+    if 80 <= code <= 82:
+        return "rain.jpg"
+    if code in (95, 96, 99):
+        return "thunderstorm.jpg"
+    return "cloudy.jpg"  # default fallback
 
 
 def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -70,10 +99,22 @@ def _draw_thunder(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
 
 def generate_cover(weather: dict) -> str:
     """
-    Generate a 640x640 JPEG cover image reflecting the weather.
+    Get cover image for weather. Uses custom images from covers/ if present,
+    otherwise falls back to Pillow-generated cover.
 
     Returns base64-encoded JPEG string for Spotify API.
     """
+    filename = _weather_to_filename(weather)
+    filepath = os.path.join(COVERS_DIR, filename)
+    if os.path.isfile(filepath):
+        with open(filepath, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+
+    return _generate_cover_pillow(weather)
+
+
+def _generate_cover_pillow(weather: dict) -> str:
+    """Fallback: generate 640x640 JPEG cover with Pillow."""
     w, h = 640, 640
     img = Image.new("RGB", (w, h))
     draw = ImageDraw.Draw(img)

@@ -15,8 +15,8 @@ LATITUDE = float(os.environ.get("LATITUDE", "40.9429"))
 LONGITUDE = float(os.environ.get("LONGITUDE", "-4.1088"))
 
 # Playlist settings
-PLAYLIST_SIZE = 25  # Number of tracks in the final playlist
-TOP_TRACKS_LIMIT = 50  # How many top tracks to analyze for taste profile
+PLAYLIST_SIZE = 50  # Number of tracks in the final playlist
+TOP_TRACKS_LIMIT = 500  # How many top tracks to analyze for taste profile
 
 # Spotify API scopes needed
 SCOPES = [
