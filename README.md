@@ -1,85 +1,154 @@
-# Weather-Based Spotify Playlist Automation
+# 🌤️ Weather Playlist
 
-Updates a Spotify playlist every hour via GitHub Actions. Fetches the current weather for Segovia, Spain; maps conditions to audio characteristics; blends with your personal taste profile; fetches recommendations; and replaces playlist contents. Also generates and uploads a dynamic cover image reflecting the weather.
+**A Spotify playlist that automatically updates every hour based on the current weather in Segovia, Spain.**
 
-**Stack**: Python 3.11+, spotipy, requests, Pillow. No database, server, or frontend — just a cron job.
+Sunny outside? Expect upbeat indie pop and feel-good tracks. Raining? Mellow acoustic and reflective vibes. Thunderstorm? Intense electronic and darkwave. The playlist adapts to whatever's happening in the sky — no manual input needed.
 
-## File Structure
-
-```
-weather-spotify-playlist/
-├── main.py              # Entry point — orchestrates the pipeline
-├── config.py            # Configuration constants
-├── auth.py              # Spotify authentication (token refresh)
-├── weather.py           # Fetch + parse weather data (Open-Meteo)
-├── mood.py              # Map weather → audio feature targets
-├── taste.py             # Build user's taste profile from top tracks
-├── recommend.py         # Get + filter Spotify recommendations
-├── playlist.py          # Update playlist tracks + metadata
-├── cover.py             # Generate + upload dynamic cover image
-├── requirements.txt
-├── .github/workflows/update-playlist.yml
-├── .gitignore
-└── README.md
-```
+---
 
 ## How It Works
 
-1. **Weather** → Open-Meteo API (free, no key)
-2. **Mood** → Maps weather (clear, rain, snow, etc.) to Spotify audio features (energy, valence, danceability, tempo, acousticness)
-3. **Taste** → Analyzes your top 50 tracks for personal preferences
-4. **Blend** → 70% weather mood + 30% personal taste
-5. **Recommend** → Spotify Recommendations API with blended targets + seeds from your taste
-6. **Update** → Replaces playlist with 25 tracks + new description + dynamic cover image
+```
+Every hour, GitHub Actions runs a script that:
+
+  1. Checks the weather  →  Open-Meteo API (free, no key needed)
+  2. Maps weather to mood  →  sunny = upbeat, rain = mellow, snow = cozy, etc.
+  3. Blends with your taste  →  pulls your top artists & genres from Spotify
+  4. Searches for tracks  →  finds songs matching both mood + your taste
+  5. Updates the playlist  →  replaces all tracks + updates cover image
+```
+
+The playlist always has 50 tracks. The cover image changes with the weather.
+
+---
+
+## Features
+
+- **Hourly automatic updates** via GitHub Actions — runs in the cloud, no computer needed
+- **Weather-to-mood mapping** — clear sky → upbeat, rain → melancholy, fog → atmospheric, snow → cozy, thunderstorm → intense
+- **Personalized** — blends weather mood with your actual Spotify listening history
+- **Dynamic cover art** — playlist cover changes to match the current weather
+- **Zero maintenance** — once set up, it runs forever (or until you disable it)
+- **No server needed** — runs entirely on GitHub Actions (free tier)
+
+---
 
 ## Setup
 
-### 1. Spotify Developer App
+### Prerequisites
+- A [Spotify](https://spotify.com) account (free or Premium)
+- A [GitHub](https://github.com) account
+- [Python 3](https://www.python.org/downloads/) installed on your computer (just for the one-time setup)
 
-Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). Add `http://localhost:8888/callback` to Redirect URIs.
+### Step 1: Create a Spotify App
 
-### 2. Get Refresh Token
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+2. Click **Create App**
+3. Fill in:
+   - **App name**: anything you want (e.g. "Weather Playlist")
+   - **Redirect URI**: `http://127.0.0.1:8888/callback`
+4. Save your **Client ID** and **Client Secret** — you'll need them in Step 3
 
-Run locally (one time):
-
-```bash
-pip install -r requirements.txt
-export SPOTIFY_CLIENT_ID="your_client_id"
-export SPOTIFY_CLIENT_SECRET="your_client_secret"
-python -c "from auth import get_initial_refresh_token; get_initial_refresh_token()"
-```
-
-Copy the printed refresh token for GitHub Secrets.
-
-### 3. GitHub Secrets
-
-Add these at `https://github.com/<username>/<repo>/settings/secrets/actions`:
-
-| Secret | Description |
-|--------|-------------|
-| `SPOTIFY_CLIENT_ID` | From Spotify Developer Dashboard |
-| `SPOTIFY_CLIENT_SECRET` | From Spotify Developer Dashboard |
-| `SPOTIFY_REFRESH_TOKEN` | From step 2 |
-| `PLAYLIST_ID` | From playlist URL: `spotify.com/playlist/XXXX` → `XXXX` |
-
-### 4. Optional: Location
-
-Default is Segovia, Spain (40.9429, -4.1088). Override via `LATITUDE` and `LONGITUDE` in the workflow env or secrets.
-
-## Test Locally
+### Step 2: Fork & Clone This Repo
 
 ```bash
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-export SPOTIFY_CLIENT_ID="..."
-export SPOTIFY_CLIENT_SECRET="..."
-export SPOTIFY_REFRESH_TOKEN="..."
-export PLAYLIST_ID="162eVgObhhCkttKtbYS5pp"
-python main.py
+# Fork this repo on GitHub (click the Fork button above), then:
+git clone https://github.com/YOUR_USERNAME/weather-spotify-playlist.git
+cd weather-spotify-playlist
 ```
 
-## Schedule
+### Step 3: Run the Setup Script
 
-- **Cron**: Every hour (`0 * * * *`)
-- **Manual**: Actions → Update Weather Playlist → Run workflow
+```bash
+python3 setup.py
+```
+
+This interactive script will:
+- Ask for your Spotify Client ID and Client Secret
+- Open your browser to authorize with Spotify
+- Automatically get your refresh token
+- Show you exactly what to paste into GitHub Secrets
+
+### Step 4: Add GitHub Secrets
+
+Go to your repo on GitHub → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+Add these four secrets (the setup script tells you the values):
+
+| Secret Name | What It Is |
+|---|---|
+| `SPOTIFY_CLIENT_ID` | From your Spotify app |
+| `SPOTIFY_CLIENT_SECRET` | From your Spotify app |
+| `SPOTIFY_REFRESH_TOKEN` | Generated by the setup script |
+| `PLAYLIST_ID` | Your Spotify playlist ID |
+
+### Step 5: Done!
+
+Go to **Actions** tab → **Update Weather Playlist** → **Run workflow** to test it.
+
+After that, it runs automatically every hour. Check your Spotify playlist!
+
+---
+
+## Configuration
+
+You can customize these values in `config.py`:
+
+| Setting | Default | What It Does |
+|---|---|---|
+| `PLAYLIST_SIZE` | 50 | Number of songs in the playlist |
+| `LATITUDE` / `LONGITUDE` | Segovia, Spain | Location for weather data |
+| `TOP_TRACKS_LIMIT` | 50 | How many of your top tracks to analyze |
+
+To change the location, update the coordinates in `config.py` and in `.github/workflows/update-playlist.yml`.
+
+---
+
+## Custom Cover Images
+
+The `covers/` folder contains weather-themed playlist cover images. You can replace them with your own — just keep the same filenames:
+
+```
+covers/clear_day.jpg
+covers/clear_night.jpg
+covers/cloudy.jpg
+covers/drizzle.jpg
+covers/foggy.jpg
+covers/rain.jpg
+covers/snow.jpg
+covers/thunderstorm.jpg
+```
+
+Images should be JPEG, 640×640 pixels, under 256KB.
+
+---
+
+## Tech Stack
+
+- **Python 3.11** — main language
+- **[Spotipy](https://spotipy.readthedocs.io/)** — Spotify API wrapper
+- **[Open-Meteo](https://open-meteo.com/)** — free weather API (no key required)
+- **[Pillow](https://pillow.readthedocs.io/)** — image processing for cover art
+- **GitHub Actions** — free CI/CD for hourly scheduling
+
+---
+
+## Troubleshooting
+
+**"Process completed with exit code 1" in GitHub Actions**
+→ Click into the failed run, expand the step with the red X, and check the error message.
+
+**"403 Forbidden" on Spotify API calls**
+→ Spotify deprecated some endpoints in 2024. This project only uses endpoints that still work (search, top tracks, playlist management). If you see a 403, your refresh token may have expired — run `python3 setup.py` again.
+
+**Playlist not updating**
+→ Check the Actions tab. If runs are failing, look at the logs. If runs aren't happening, make sure the workflow file exists at `.github/workflows/update-playlist.yml`.
+
+**"redirect_uri: Not matching configuration"**
+→ Make sure `http://127.0.0.1:8888/callback` is added as a Redirect URI in your Spotify app settings. Note: `localhost` does not work — it must be `127.0.0.1`.
+
+---
+
+## License
+
+MIT
